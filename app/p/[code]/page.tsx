@@ -1,41 +1,27 @@
-import { notFound } from "next/navigation";
-import { getProfileByCode } from "@/lib/profileRepo";
+// app/p/[code]/page.tsx
+import { supabaseServer } from "@/lib/supabase/server";
 
-type Props = {
+type PageProps = {
   params: Promise<{ code: string }>;
 };
 
-export default async function Page({ params }: Props) {
-  const { code } = await params;        // ← これが必須
-  const p = await getProfileByCode(code);
-  if (!p) return notFound();
+export default async function PublicProfilePage({ params }: PageProps) {
+  const { code } = await params;
+
+  const { data: profile, error } = await supabaseServer
+    .from("profiles")
+    .select("*")
+    .eq("code", code)
+    .single();
+
+  if (error || !profile) {
+    return <div className="p-6">見つかりませんでした</div>;
+  }
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <div className="rounded-2xl border bg-white p-5">
-        <div className="flex items-center gap-4">
-          {p.icon_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={p.icon_url}
-              alt=""
-              className="h-16 w-16 rounded-full object-cover"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-zinc-200" />
-          )}
-          <div>
-            <h1 className="text-lg font-bold">{p.display_name || "No Name"}</h1>
-            <div className="text-xs text-zinc-500">pastel-link</div>
-          </div>
-        </div>
-
-        {p.bio ? (
-          <p className="mt-3 whitespace-pre-wrap leading-relaxed text-zinc-800">
-            {p.bio}
-          </p>
-        ) : null}
-      </div>
+    <main className="p-6">
+      <h1 className="text-2xl font-bold">{profile.display_name ?? "No name"}</h1>
+      <p className="mt-2 whitespace-pre-wrap">{profile.bio ?? ""}</p>
     </main>
   );
 }

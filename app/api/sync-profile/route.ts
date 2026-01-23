@@ -1,3 +1,4 @@
+// app/api/sync-profile/route.ts
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -12,45 +13,56 @@ type Payload = {
   sns?: SNS | null;
 };
 
+function genToken(len = 32) {
+  const chars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let out = "";
+  for (let i = 0; i < len; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+
 export async function POST(req: Request) {
-  // ① WP→Next の認証（超重要）
+  // ① WP→Next 認証
   const token = req.headers.get("x-sync-token");
   if (!token || token !== process.env.X_SYNC_TOKEN) {
-    return NextResponse.json(
-      { ok: false, error: "unauthorized" },
-      { status: 401 },
-    );
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  // ② payload
   const body = (await req.json()) as Payload;
 
-  // ② 最低限チェック
   if (!body.slug || !body.code) {
-    return NextResponse.json(
-      { ok: false, error: "missing slug/code" },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: "missing slug/code" }, { status: 400 });
   }
 
-  // ③ upsert
-  const { error } = await supabaseServer.from("profiles").upsert(
-    {
-      slug: body.slug,
-      code: body.code,
-      display_name: body.display_name ?? "",
-      bio: body.bio ?? "",
-      icon_url: body.icon_url ?? "",
-      sns: body.sns ?? null,
-    },
-    { onConflict: "code" }, // codeをユニークにしてる想定
-  );
+  // ③ edit_token を毎回発行（= 再発行したら古いの無効）
+  const edit_token = genToken(32);
 
-  if (error) {
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 500 },
-    );
+  const { data, error } = await supabaseServer
+    .from("profiles")
+    .upsert(
+      {
+        slug: body.slug,
+        code: body.code,
+        display_name: body.display_name ?? "",
+        bio: body.bio ?? "",
+        icon_url: body.icon_url ?? "",
+        website_url: null, // 列があるなら適宜（なければ削除）
+        sns: body.sns ?? null,
+        edit_token,
+        edit_token_updated_at: new Date().toISOString(),
+      },
+      { onConflict: "code" }
+    )
+    .select("code, edit_token")
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ ok: false, error: error?.message ?? "db error" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // ✅ WPが編集URLを作れるように返す
+  return NextResponse.json({ ok: true, code: data.code, edit_token: data.edit_token });
 }
