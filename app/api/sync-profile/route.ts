@@ -45,7 +45,6 @@ export async function POST(req: Request) {
 
   // ③ edit_token を毎回発行（= 再発行したら古いの無効）
   const edit_token = genToken(32);
-
   const { data, error } = await supabaseServer
     .from("profiles")
     .upsert(
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
         display_name: body.display_name ?? "",
         bio: body.bio ?? "",
         icon_url: body.icon_url ?? "",
-        website_url: null, // 列があるなら適宜（なければ削除）
+        // website_url: null,  // ← まずは一旦消して原因切り分け
         sns: body.sns ?? null,
         edit_token,
         edit_token_updated_at: new Date().toISOString(),
@@ -65,15 +64,17 @@ export async function POST(req: Request) {
     .select("code, edit_token")
     .single();
 
-  console.log("sync-profile called");
-  console.log("[sync] body", body);
-  console.log("[sync] upsert result", { data, error });
-
-  if (error || !data) {
+  if (error) {
+    console.log("[sync] supabase error", error);
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "db error" },
+      { ok: false, error: error.message, details: error },
       { status: 500 },
     );
+  }
+
+  if (!data) {
+    console.log("[sync] no data returned");
+    return NextResponse.json({ ok: false, error: "no data" }, { status: 500 });
   }
 
   // ✅ WPが編集URLを作れるように返す
