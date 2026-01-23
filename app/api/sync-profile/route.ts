@@ -65,9 +65,8 @@ export async function POST(req: Request) {
     .single();
 
   if (error) {
-    console.log("[sync] supabase error", error);
-    return NextResponse.json(
-      { ok: false, error: error.message, details: error },
+    return new Response(
+      JSON.stringify({ ok: false, error: error.message, details: error }),
       { status: 500 },
     );
   }
