@@ -66,6 +66,8 @@ export async function POST(req: Request) {
     .single();
 
   console.log("sync-profile called");
+  console.log("[sync] body", body);
+  console.log("[sync] upsert result", { data, error });
 
   if (error || !data) {
     return NextResponse.json(
