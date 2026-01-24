@@ -24,6 +24,7 @@ export default function EditForm({ code, initial }: Props) {
 
   const sp = useSearchParams();
   const token = sp.get("t") ?? "";
+  const tokenMissing = token === "";
 
   const canSave = useMemo(() => {
     return token !== ""; // まずはこれでOK
@@ -49,10 +50,10 @@ export default function EditForm({ code, initial }: Props) {
           code,
           token,
           patch: {
-            // 空文字をnullに寄せる（DBをnull管理したい場合）
-            display_name: form.display_name === "" ? null : form.display_name,
-            bio: form.bio === "" ? null : form.bio,
-            icon_url: form.icon_url === "" ? "" : form.icon_url,
+            display_name: (form.display_name ?? "").trim(), // nullにしない
+            bio: form.bio ?? "", // nullにしない
+            icon_url: form.icon_url ?? "",
+            website_url: form.website_url ?? "",
           },
         }),
       });
@@ -119,7 +120,11 @@ export default function EditForm({ code, initial }: Props) {
         >
           {saving ? "保存中..." : "保存"}
         </button>
-
+        {tokenMissing && (
+          <p className="text-sm text-red-600">
+            編集トークンがありません（URLに ?t=... が必要）
+          </p>
+        )}
         {message && <p className="text-sm text-green-600">{message}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>

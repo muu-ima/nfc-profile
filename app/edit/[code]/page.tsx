@@ -1,13 +1,12 @@
-// app/edit/[code]/page.tsx
 import { supabaseServer } from "@/lib/supabase/server";
 import EditForm from "./EditForm";
 
 export default async function EditPage({
   params,
 }: {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }) {
-  const code = params.code;
+  const { code } = await params;
 
   const { data: profile, error } = await supabaseServer
     .from("profiles")
