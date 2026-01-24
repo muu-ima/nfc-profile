@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Profile, ProfileUpdateInput } from "@/lib/profile/types";
 
 type Props = {
@@ -21,10 +22,12 @@ export default function EditForm({ code, initial }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const sp = useSearchParams();
+  const token = sp.get("t") ?? "";
+
   const canSave = useMemo(() => {
-    // 最低限：表示名が空ならNGなど（要件で調整）
-    return true;
-  }, []);
+    return token !== ""; // まずはこれでOK
+  }, [token]);
 
   const onChange =
     (key: keyof ProfileUpdateInput) =>
@@ -44,6 +47,7 @@ export default function EditForm({ code, initial }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
+          token,
           patch: {
             // 空文字をnullに寄せる（DBをnull管理したい場合）
             display_name: form.display_name === "" ? null : form.display_name,
