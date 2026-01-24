@@ -4,9 +4,9 @@ import { supabaseServer } from "@/lib/supabase/server";
 export default async function Page({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }) {
-  const { slug } = await params;
+  const slug = params.slug;
 
   const { data, error } = await supabaseServer
     .from("profiles")
@@ -20,8 +20,6 @@ export default async function Page({
   return (
     <main style={{ padding: 24 }}>
       <h1>{data.display_name ?? data.slug}</h1>
-
-      <div>code: {data.code}</div>
 
       <p>{data.bio ?? "(no bio)"}</p>
 
