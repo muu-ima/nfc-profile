@@ -2,36 +2,47 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 
+export const revalidate = 0; // ローカル確認ではキャッシュ切り
+
 export default async function PublicProfilePage({
   params,
 }: {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }) {
-  const code = params.code;
+  const { code } = await params; // ★ここが肝
 
   const { data: profile, error } = await supabaseServer
     .from("profiles")
-    .select("code, slug, display_name, bio") // 必要分だけ
+    .select("code, slug, display_name, bio, status")
     .eq("code", code)
-    .single();
+    .maybeSingle();
 
-  if (error || !profile) {
-    return <div className="p-6">見つかりませんでした</div>;
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="font-bold">エラー</div>
+        <pre className="mt-2 text-xs whitespace-pre-wrap">{error.message}</pre>
+      </div>
+    );
   }
 
-  // ✅ slug があれば公開URLへ誘導（入口の役割）
+  if (!profile) {
+    return <div className="p-6">見つかりませんでした（code={code}）</div>;
+  }
+
+  if (profile.status === "disabled") {
+    return <div className="p-6">無効化されています</div>;
+  }
+
   if (profile.slug && profile.slug.trim() !== "") {
     redirect(`/u/${profile.slug}`);
   }
 
-  // slug未設定の暫定表示（スモールステップ）
   return (
     <main className="p-6">
       <h1 className="text-2xl font-bold">{profile.display_name ?? "No name"}</h1>
       <p className="mt-2 whitespace-pre-wrap">{profile.bio ?? ""}</p>
-      <p className="mt-6 text-xs text-zinc-500">
-        ※ まだURLスラッグが設定されていません
-      </p>
+      <p className="mt-6 text-xs text-zinc-500">※ まだURLスラッグが設定されていません</p>
     </main>
   );
 }
