@@ -7,7 +7,7 @@ type CreatePayload = {
   display_name?: string | null;
   bio?: string | null;
   icon_url?: string | null;
-  sns?: string | null; // ←DBが text の想定ならこれでOK。jsonb/配列なら型変える
+  sns?: string | null; // text想定
 };
 
 function genToken() {
@@ -34,12 +34,11 @@ export async function POST(req: Request) {
   const editToken = genToken();
   const editTokenHash = sha256(editToken);
 
-  // ✅ NOT NULL対策：create時は「空で初期化」
-  const display_name = (body?.display_name ?? "").trim(); // ←null禁止なら "" にする
-  const bio = (body?.bio ?? "").trim();                   // ←null禁止なら "" にする
-
-  // sns が NOT NULL の列ならここも "" に寄せる
-  const sns = body?.sns ?? null;
+  // ✅ NOT NULL対策：create時は空で初期化
+  const display_name = (body?.display_name ?? "").trim();
+  const bio = (body?.bio ?? "").trim();
+  const icon_url = (body?.icon_url ?? "").trim();
+  const sns = (body?.sns ?? "").trim(); // ← sns も NOT NULLならここ
 
   const supabase = supabaseAdmin();
 
@@ -51,7 +50,7 @@ export async function POST(req: Request) {
         slug: code,
         display_name,
         bio,
-        icon_url: body?.icon_url ?? null,
+        icon_url,
         sns,
         edit_token_hash: editTokenHash,
       },
