@@ -9,7 +9,7 @@ export default async function PublicProfilePage({
 }: {
   params: Promise<{ code: string }>;
 }) {
-  const { code: raw } = await params; // ✅ ここが重要
+  const { code: raw } = await params; // ✅ Next16対応
   const code = (raw ?? "").trim();
 
   if (!code) return <div className="p-6">code が空です</div>;
@@ -32,6 +32,7 @@ export default async function PublicProfilePage({
   if (!profile) return <div className="p-6">見つかりませんでした（code={code}）</div>;
   if (profile.status === "disabled") return <div className="p-6">無効化されています</div>;
 
+  // slug があれば /u に寄せる
   if (profile.slug && profile.slug.trim() !== "") {
     redirect(`/u/${profile.slug}`);
   }
