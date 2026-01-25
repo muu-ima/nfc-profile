@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-type CreatePayload = { code: string };
+type CreatePayload = {
+  code: string; // 例: wa5y5cxcd5
+  display_name?: string | null;
+  bio?: string | null;
+  icon_url?: string | null;
+  sns?: string | null;
+};
+
+// tokenは「生は返す」「DBにはhashだけ保存」
+function genToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+function sha256(s: string) {
+  return crypto.createHash("sha256").update(s).digest("hex");
+}
 
 export async function POST(req: Request) {
   // ✅ WP認証（createは必須）
@@ -18,15 +34,44 @@ export async function POST(req: Request) {
   // ✅ そのリクエストが来たドメイン（本番/プレビュー/ローカルに追従）
   const origin = new URL(req.url).origin;
 
-  // TODO: ここで supabase upsert / edit token 発行
-  // 例: const editToken = await issueEditToken(code);
-  const editToken = "YOUR_TOKEN"; // ←ここは必ず実装に置き換える
+  // ✅ 編集token生成（安全）
+  const editToken = genToken();
+  const editTokenHash = sha256(editToken);
 
-  const edit_url = `${origin}/edit/${encodeURIComponent(code)}?t=${encodeURIComponent(editToken)}`;
-  const public_url = `${origin}/p/${encodeURIComponent(code)}`;
+  // ✅ Supabase upsert（あなたのテーブル列に合わせる）
+  const supabase = supabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        code,              // 一旦 code=wa5y... をそのまま入れる
+        slug: code,        // URLも /p/{code} なので slug=code に寄せる
+        display_name: body?.display_name ?? null,
+        bio: body?.bio ?? null,
+        icon_url: body?.icon_url ?? null,
+        sns: body?.sns ?? null,
+        edit_token_hash: editTokenHash,
+      },
+      { onConflict: "code" } // code が unique 前提
+    )
+    .select("code, slug")
+    .single();
+
+  if (error || !data) {
+    console.error("SUPABASE_UPSERT_ERROR", error);
+    return NextResponse.json(
+      { ok: false, error: `supabase upsert failed: ${error?.message ?? "no data"}` },
+      { status: 500 }
+    );
+  }
+
+  // ✅ URL生成（生tokenをeditに含める）
+  const edit_url = `${origin}/edit/${encodeURIComponent(data.slug)}?t=${encodeURIComponent(editToken)}`;
+  const public_url = `${origin}/p/${encodeURIComponent(data.slug)}`;
 
   return NextResponse.json(
-    { ok: true, edit_url, public_url },
+    { ok: true, code: data.slug, edit_url, public_url },
     { status: 200 }
   );
 }
