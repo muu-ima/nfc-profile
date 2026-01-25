@@ -8,7 +8,7 @@ export default async function PublicProfilePage({
 }: {
   params: { code: string };
 }) {
-  const { code } = params;
+  const code = params.code;
 
   const { data: profile, error } = await supabaseServer
     .from("profiles")
