@@ -1,31 +1,23 @@
 // app/p/[code]/page.tsx
-import { headers } from "next/headers";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function PublicProfilePage({
+export default function Page({
   params,
 }: {
   params: { code: string };
 }) {
-  const h = await headers(); // ← await つける
-  const code = params?.code ?? "(missing)";
-
   return (
-    <pre className="p-6">
-      {JSON.stringify(
-        {
-          vercelId: h.get("x-vercel-id"),
-          params,
-          code,
-        },
-        null,
-        2
-      )}
+    <pre style={{ padding: 24 }}>
+      code: {String(params?.code)}
+      {"\n"}
+      keys: {JSON.stringify(Object.keys(params ?? {}))}
+      {"\n"}
+      raw: {String(params)}
     </pre>
   );
 }
+
 
 // const { data: profile, error } = await supabaseServer
 //   .from("profiles")
