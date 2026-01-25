@@ -7,9 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function PublicProfilePage({
   params,
 }: {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }) {
-  const code = (params.code ?? "").trim();
+  const { code: raw } = await params; // ✅ ここが重要
+  const code = (raw ?? "").trim();
+
   if (!code) return <div className="p-6">code が空です</div>;
 
   const { data: profile, error } = await supabaseServer
@@ -27,13 +29,8 @@ export default async function PublicProfilePage({
     );
   }
 
-  if (!profile) {
-    return <div className="p-6">見つかりませんでした（code={code}）</div>;
-  }
-
-  if (profile.status === "disabled") {
-    return <div className="p-6">無効化されています</div>;
-  }
+  if (!profile) return <div className="p-6">見つかりませんでした（code={code}）</div>;
+  if (profile.status === "disabled") return <div className="p-6">無効化されています</div>;
 
   if (profile.slug && profile.slug.trim() !== "") {
     redirect(`/u/${profile.slug}`);
