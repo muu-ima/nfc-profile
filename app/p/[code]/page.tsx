@@ -3,12 +3,18 @@ export const revalidate = 0;
 
 export default async function PublicProfilePage({
   params,
+  searchParams,
 }: {
-  params: { code: string };
+  params: { code?: string };
+  searchParams?: { code?: string };
 }) {
-  const code = params.code;
+  const code = params.code ?? searchParams?.code ?? "";
 
-  return <pre className="p-6">{JSON.stringify({ params, code }, null, 2)}</pre>;
+  return (
+    <pre className="p-6">
+      {JSON.stringify({ params, searchParams, code }, null, 2)}
+    </pre>
+  );
 }
 
 // const { data: profile, error } = await supabaseServer
