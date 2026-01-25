@@ -1,19 +1,28 @@
 // app/p/[code]/page.tsx
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const dynamic = "force-dynamic"; 
 
 export default async function PublicProfilePage({
   params,
-  searchParams,
 }: {
-  params: { code?: string };
-  searchParams?: { code?: string };
+  params: { code: string };
 }) {
-  const code = params.code ?? searchParams?.code ?? "";
+  const h = await headers(); // ← await つける
+  const code = params?.code ?? "(missing)";
 
   return (
     <pre className="p-6">
-      {JSON.stringify({ params, searchParams, code }, null, 2)}
+      {JSON.stringify(
+        {
+          vercelId: h.get("x-vercel-id"),
+          params,
+          code,
+        },
+        null,
+        2
+      )}
     </pre>
   );
 }
